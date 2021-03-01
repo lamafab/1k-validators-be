@@ -1,10 +1,10 @@
-use crate::events::{NodeId, NodeName, TelemetryEvent};
+use crate::events::{NodeId, NodeName, NodeVersion, TelemetryEvent};
 use crate::{Result, ToBson};
-use bson::{from_document, Document};
-use futures::{StreamExt, TryStreamExt};
+use bson::from_document;
+use futures::StreamExt;
 use mongodb::options::UpdateOptions;
 use mongodb::{Client, Collection, Database};
-use tokio_tungstenite::tungstenite::Message;
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const TELEMETRY_EVENT_STORE_COLLECTION: &'static str = "telemetry_events";
@@ -163,17 +163,88 @@ impl TelemetryEventStore {
             Ok(None)
         }
     }
+    pub async fn get_majority_client_version(&self) -> Result<Option<NodeVersion>> {
+        let mut cursor = self
+            .coll
+            .find(
+                doc! {
+                    "event_logs.event.type": "added_node",
+                    "event_logs.event.content.details.version": {
+                        "$exists": true,
+                    }
+                },
+                None,
+            )
+            .await?;
+
+        let mut observed_versions = HashMap::new();
+        while let Some(doc) = cursor.next().await {
+            let node_activity: NodeActivity = from_document(doc?)?;
+
+            let mut version = None;
+            for log in node_activity.event_logs {
+                match log.event {
+                    TelemetryEvent::AddedNode(event) => {
+                        version = Some(event.details.version);
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+
+            // Ignore if the version of the node could not be determined.
+            if let Some(version) = version {
+                observed_versions
+                    .entry(version)
+                    .and_modify(|occurences| *occurences += 1)
+                    .or_insert(1);
+            }
+        }
+
+        // Find the client version with the most occurrences.
+        let mut m_version = None;
+        let mut m_occurrences = 0;
+        for (version, occurrences) in observed_versions {
+            if occurrences > m_occurrences {
+                m_version = Some(version);
+                m_occurrences = occurrences;
+            }
+        }
+
+        Ok(m_version)
+    }
+    pub async fn get_observed_names(&self) -> Result<Vec<NodeName>> {
+        let mut cursor = self
+            .coll
+            .find(
+                doc! {
+                    "node_name": {
+                        "$exists": true,
+                    },
+                    "node_name": 1
+                },
+                None,
+            )
+            .await?;
+
+        let mut names = vec![];
+        while let Some(doc) = cursor.next().await {
+            names.push(from_document(doc?)?);
+        }
+
+        Ok(names)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::events::{NodeId, TelemetryEvent};
+    use crate::events::{AddedNodeEvent, NodeDetails, NodeId, NodeImplementation, TelemetryEvent};
 
     #[tokio::test]
     async fn store_event() {
         // Create client.
-        let client = MongoClient::new("mongodb://localhost:27017/", "test_db")
+        let client = MongoClient::new("mongodb://localhost:27017/", "test_store_event")
             .await
             .unwrap()
             .get_telemetry_event_store();
@@ -215,6 +286,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+
         assert_eq!(stored.event_logs.len(), node_1_events.len());
         for (log, expected) in stored.event_logs.iter().zip(node_1_events.iter()) {
             assert_eq!(&log.event, expected);
@@ -226,6 +298,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+
         assert_eq!(stored.event_logs.len(), node_2_events.len());
         for (log, expected) in stored.event_logs.iter().zip(node_2_events.iter()) {
             assert_eq!(&log.event, expected);
@@ -237,6 +310,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+
         assert_eq!(stored.event_logs.len(), node_3_events.len());
         for (log, expected) in stored.event_logs.iter().zip(node_3_events.iter()) {
             assert_eq!(&log.event, expected);
@@ -258,10 +332,12 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+
         assert_eq!(
             stored.event_logs.len(),
             node_1_events.len() + node_1_events_new.len()
         );
+
         for (log, expected) in stored
             .event_logs
             .iter()
@@ -269,6 +345,47 @@ mod tests {
         {
             assert_eq!(&log.event, expected);
         }
+
+        client.drop().await;
+    }
+
+    #[tokio::test]
+    async fn get_majority_client_version() {
+        // Create client.
+        let client = MongoClient::new(
+            "mongodb://localhost:27017/",
+            "test_get_majority_client_version",
+        )
+        .await
+        .unwrap()
+        .get_telemetry_event_store();
+
+        client.drop().await;
+
+        let messages = [
+            TelemetryEvent::AddedNode({
+                let mut event = AddedNodeEvent::alice();
+                event.details.version = NodeVersion::from("2.0".to_string());
+                event
+            }),
+            TelemetryEvent::AddedNode({
+                let mut event = AddedNodeEvent::alice();
+                event.details.version = NodeVersion::from("1.0".to_string());
+                event
+            }),
+            TelemetryEvent::AddedNode({
+                let mut event = AddedNodeEvent::alice();
+                event.details.version = NodeVersion::from("2.0".to_string());
+                event
+            }),
+        ];
+
+        for message in &messages {
+            client.store_event(message.clone()).await.unwrap();
+        }
+
+        let version = client.get_majority_client_version().await.unwrap().unwrap();
+        assert_eq!(version, NodeVersion::from("2.0".to_string()));
 
         client.drop().await;
     }

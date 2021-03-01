@@ -1,53 +1,45 @@
 use super::Result;
 use serde_json::Value;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct NodeId(i64);
-
-#[cfg(test)]
-impl From<i64> for NodeId {
-    fn from(val: i64) -> Self {
-        NodeId(val)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct NodeName(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct NodeImplementation(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct NodeVersion(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct Address(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct Timestamp(f64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct BlockNumber(i64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct BlockHash(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct BlockTime(Milliseconds);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct NetworkId(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct PeerCount(usize);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct TransactionCount(usize);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
+pub struct PeerCount(i64);
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
+pub struct TransactionCount(i64);
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct Milliseconds(i64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct PropagationTime(Milliseconds);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct BytesPerSecond(f64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct Latitude(f64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct Longitude(f64);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, Deserialize, Serialize)]
 pub struct City(String);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct UploadSpeed(Vec<BytesPerSecond>);
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct DownloadSpeed(Vec<BytesPerSecond>);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -117,7 +109,7 @@ impl TelemetryEvent {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct HardwareEvent {
     node_id: NodeId,
     hardware: NodeHardware,
@@ -147,7 +139,7 @@ pub struct HardwareEventRaw(
     ),
 );
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct NodeStatsEvent {
     node_id: NodeId,
     stats: NodeStats,
@@ -212,21 +204,21 @@ pub struct AddedNodeEventRaw(
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct AddedNodeEvent {
     /// Node identifier
-    node_id: NodeId,
+    pub node_id: NodeId,
     /// Static details
-    details: NodeDetails,
+    pub details: NodeDetails,
     /// Basic stats
-    stats: NodeStats,
+    pub stats: NodeStats,
     /// Node IO stats
-    io: NodeIO,
+    pub io: NodeIO,
     /// Hardware stats over time
-    hardware: NodeHardware,
+    pub hardware: NodeHardware,
     /// Best block
-    best: BlockDetails,
+    pub best: BlockDetails,
     /// Physical location details
-    location: Option<NodeLocation>,
+    pub location: Option<NodeLocation>,
     /// Unix timestamp for when node started up (falls back to connection time)
-    startup_time: Option<Timestamp>,
+    pub startup_time: Option<Timestamp>,
 }
 
 impl From<AddedNodeEventRaw> for AddedNodeEvent {
@@ -271,7 +263,7 @@ impl From<AddedNodeEventRaw> for AddedNodeEvent {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct NodeDetails {
     pub name: NodeName,
     pub implementation: NodeImplementation,
@@ -280,7 +272,7 @@ pub struct NodeDetails {
     pub network_id: Option<NetworkId>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct NodeStats {
     pub peers: PeerCount,
     pub txcount: TransactionCount,
@@ -291,7 +283,15 @@ pub struct NodeIO {
     pub used_state_cache_size: Vec<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+impl Default for NodeIO {
+    fn default() -> Self {
+        NodeIO {
+            used_state_cache_size: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 pub struct BlockDetails {
     pub block_number: BlockNumber,
     pub block_hash: BlockHash,
@@ -317,9 +317,97 @@ pub struct NodeHardware {
     pub chart_stamps: Vec<Timestamp>,
 }
 
+impl Default for NodeHardware {
+    fn default() -> Self {
+        NodeHardware {
+            upload: UploadSpeed(vec![]),
+            download: DownloadSpeed(vec![]),
+            chart_stamps: vec![],
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct NodeLocation {
     pub latitude: Latitude,
     pub longitude: Longitude,
     pub city: City,
+}
+
+impl Default for NodeLocation {
+    fn default() -> Self {
+        NodeLocation {
+            latitude: Latitude(0.0),
+            longitude: Longitude(0.0),
+            city: Default::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl From<i64> for NodeId {
+        fn from(val: i64) -> Self {
+            NodeId(val)
+        }
+    }
+
+    impl From<String> for NodeVersion {
+        fn from(val: String) -> Self {
+            NodeVersion(val)
+        }
+    }
+
+    impl AddedNodeEvent {
+        pub fn alice() -> Self {
+            AddedNodeEvent {
+                node_id: NodeId(1),
+                details: {
+                    let mut details = NodeDetails::default();
+                    details.name = NodeName("Alice".to_string());
+                    details
+                },
+                stats: Default::default(),
+                io: Default::default(),
+                hardware: Default::default(),
+                best: Default::default(),
+                location: Default::default(),
+                startup_time: Default::default(),
+            }
+        }
+        pub fn bob() -> Self {
+            AddedNodeEvent {
+                node_id: NodeId(1),
+                details: {
+                    let mut details = NodeDetails::default();
+                    details.name = NodeName("Bob".to_string());
+                    details
+                },
+                stats: Default::default(),
+                io: Default::default(),
+                hardware: Default::default(),
+                best: Default::default(),
+                location: Default::default(),
+                startup_time: Default::default(),
+            }
+        }
+        pub fn eve() -> Self {
+            AddedNodeEvent {
+                node_id: NodeId(1),
+                details: {
+                    let mut details = NodeDetails::default();
+                    details.name = NodeName("Eve".to_string());
+                    details
+                },
+                stats: Default::default(),
+                io: Default::default(),
+                hardware: Default::default(),
+                best: Default::default(),
+                location: Default::default(),
+                startup_time: Default::default(),
+            }
+        }
+    }
 }
